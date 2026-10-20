@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="zh-HK" class="h-full select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>香港小六數學：平均數極速賽車大挑戰</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            touch-action: manipulation;
+        }
+
+        .font-racing {
+            font-family: 'Chakra Petch', sans-serif;
+        }
+
+        /* Glassmorphic UI HUD */
+        .hud-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .neon-border-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.5), inset 0 0 15px rgba(6, 182, 212, 0.2);
+        }
+
+        .neon-border-yellow {
+            box-shadow: 0 0 15px rgba(234, 179, 8, 0.6), inset 0 0 10px rgba(234, 179, 8, 0.2);
+        }
+
+        .neon-text-glow {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 0 0 20px rgba(56, 189, 248, 0.4);
+        }
+
+        .racing-btn {
+            transition: all 0.15s ease-out;
+            transform: translateY(0);
+        }
+        .racing-btn:active {
+            transform: translateY(3px) scale(0.98);
+        }
+
+        /* Fraction layout styling */
+        .math-frac {
+            display: inline-flex;
+            flex-direction: column;
+            vertical-align: middle;
+            text-align: center;
+            padding: 0 0.3rem;
+        }
+        .math-num {
+            border-bottom: 2px solid currentColor;
+            padding-bottom: 1px;
+            line-height: 1.1;
+        }
+        .math-den {
+            padding-top: 1px;
+            line-height: 1.1;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.4);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white h-full overflow-hidden flex flex-col select-none">
+
+    <!-- Top Navigation & HUD Header -->
+    <header class="w-full bg-slate-900/90 border-b border-cyan-500/30 p-2 sm:p-3 flex justify-between items-center z-20 shadow-lg">
+        <div class="flex items-center space-x-2 sm:space-x-3">
+            <div class="bg-gradient-to-r from-amber-500 to-red-600 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs sm:text-sm tracking-wider font-racing uppercase shadow-md">
+                HK P6 MATH
+            </div>
+            <h1 class="text-base sm:text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-200 to-amber-300">
+                平均數極速賽車大挑戰 🏎️
+            </h1>
+        </div>
+
+        <div class="flex items-center space-x-2 sm:space-x-3">
+            <button id="btn-scratchpad" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-1.5 px-3 rounded-xl flex items-center space-x-1.5 text-xs sm:text-sm shadow-lg shadow-indigo-600/30 transition active:scale-95">
+                <span>✏️ 草稿板</span>
+            </button>
+            <button id="btn-sound" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 p-2 rounded-xl border border-cyan-500/30 transition active:scale-95">
+                <span id="sound-icon">🔊</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Workspace -->
+    <main class="flex-1 relative w-full h-full overflow-hidden flex flex-col justify-between p-2 sm:p-4">
+
+        <!-- Live Race Track Viewport (Top half) -->
+        <div class="w-full h-44 sm:h-52 md:h-60 relative rounded-2xl overflow-hidden border-2 border-cyan-500/40 shadow-2xl bg-slate-900">
+            <!-- Canvas Animated Track -->
+            <canvas id="race-canvas" class="w-full h-full block"></canvas>
+
+            <!-- Race Status Overlay HUD -->
+            <div class="absolute top-2 left-2 right-2 flex justify-between items-center pointer-events-none">
+                <!-- Leaderboard Rank Badge -->
+                <div class="hud-panel px-3 py-1.5 rounded-xl border border-cyan-400/50 flex items-center space-x-2">
+                    <span class="text-xs text-cyan-300 font-bold uppercase tracking-wider">名次:</span>
+                    <span id="rank-display" class="text-xl sm:text-2xl font-black text-amber-400 font-racing">1st</span>
+                    <span id="total-racers-display" class="text-xs text-slate-400">/ 4</span>
+                </div>
+
+                <!-- Timer / Distance Counter -->
+                <div class="hud-panel px-3 py-1.5 rounded-xl border border-cyan-400/50 flex items-center space-x-3">
+                    <div class="text-right">
+                        <div id="timer-label" class="text-[10px] text-cyan-300 uppercase font-bold">賽程時間</div>
+                        <div id="timer-display" class="text-lg sm:text-2xl font-black text-yellow-300 font-racing leading-none">180.0s</div>
+                    </div>
+                    <div class="h-6 w-px bg-slate-700"></div>
+                    <div class="text-left">
+                        <div class="text-[10px] text-cyan-300 uppercase font-bold">賽車積分</div>
+                        <div id="score-display" class="text-lg sm:text-2xl font-black text-emerald-400 font-racing leading-none">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nitro Combo Multiplier Badge -->
+            <div id="combo-badge" class="absolute bottom-2 right-3 opacity-0 transition-all duration-300 transform scale-75 bg-gradient-to-r from-amber-500 to-red-600 text-slate-950 font-black px-3 py-1 rounded-full text-xs sm:text-sm font-racing shadow-lg flex items-center gap-1">
+                ⚡ NITRO COMBO <span id="combo-count">x2</span>!
+            </div>
+        </div>
+
+        <!-- Question & Answer Control Area (Bottom half) -->
+        <div class="flex-1 mt-2 sm:mt-3 flex flex-col justify-between max-w-4xl mx-auto w-full">
+            
+            <!-- Question Card -->
+            <div id="question-card" class="hud-panel p-3 sm:p-5 rounded-2xl border-2 border-cyan-400/60 relative overflow-hidden flex flex-col justify-between min-h-[140px] sm:min-h-[170px] shadow-xl transition-all duration-300">
+                
+                <div class="flex justify-between items-center mb-1">
+                    <span id="question-type-tag" class="bg-cyan-950/80 border border-cyan-400 text-cyan-300 text-[11px] sm:text-xs font-extrabold px-2.5 py-0.5 rounded-full tracking-wide">
+                        📌 題目類型：基礎求平均數
+                    </span>
+                    <span id="question-number-tag" class="text-xs text-slate-400 font-mono">
+                        QUESTION #<span id="q-num">1</span>
+                    </span>
+                </div>
+
+                <!-- Word Problem Text -->
+                <div id="question-text" class="text-sm sm:text-base md:text-lg font-bold text-slate-100 leading-relaxed my-auto">
+                    <!-- Dynamic Question Text inserted here -->
+                </div>
+
+                <!-- Formula Hint Bar -->
+                <div class="text-[11px] sm:text-xs text-slate-400 flex items-center gap-2 border-t border-slate-800/80 pt-1.5 mt-1">
+                    <span class="text-amber-400 font-bold">💡 提示公式：</span>
+                    <span id="formula-hint-text">平均數 = 總數 ÷ 項數</span>
+                </div>
+            </div>
+
+            <!-- Options Grid -->
+            <div id="options-container" class="grid grid-cols-2 gap-2 sm:gap-3 my-2 sm:my-3">
+                <!-- 4 Interactive Option Buttons -->
+            </div>
+
+            <!-- Bottom Control Action Bar -->
+            <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+                <div>
+                    正確率: <span id="accuracy-text" class="text-cyan-300 font-mono font-bold">100%</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="btn-skip" class="text-slate-400 hover:text-slate-200 underline text-xs">跳過題目 (-10分)</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Tablet Scratchpad Drawer / Overlay -->
+    <div id="scratchpad-modal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex flex-col p-3 sm:p-5">
+        <div class="flex justify-between items-center mb-2 hud-panel p-3 rounded-2xl border border-cyan-500/40">
+            <div class="flex items-center space-x-2">
+                <span class="text-base sm:text-lg font-extrabold text-cyan-300">📝 平板手寫計算草稿板</span>
+                <span class="text-xs text-slate-400 hidden sm:inline">(支援直式加減乘除演算)</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button id="btn-clear-pad" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-1 px-3 rounded-lg text-xs sm:text-sm transition">
+                    🗑️ 清除
+                </button>
+                <button id="btn-close-pad" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-1 px-3 rounded-lg text-xs sm:text-sm transition">
+                    ✖️ 關閉草稿板
+                </button>
+            </div>
+        </div>
+        <div class="flex-1 bg-slate-900 rounded-2xl border-2 border-dashed border-cyan-500/40 relative overflow-hidden shadow-inner">
+            <canvas id="scratchpad-canvas" class="w-full h-full cursor-crosshair"></canvas>
+        </div>
+    </div>
+
+    <!-- Explanation / Solution Modal -->
+    <div id="solution-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="hud-panel max-w-lg w-full rounded-3xl p-5 sm:p-6 border-2 border-amber-400/70 shadow-2xl relative">
+            <div class="flex items-center gap-2 mb-3">
+                <span class="text-2xl">💡</span>
+                <h3 class="text-lg sm:text-xl font-extrabold text-amber-300">詳細解題步驟</h3>
+            </div>
+            <div id="solution-content" class="text-xs sm:text-sm text-slate-200 space-y-3 leading-relaxed bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+                <!-- Solution details inserted here -->
+            </div>
+            <button id="btn-next-question" class="w-full mt-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-base rounded-xl shadow-lg transition transform active:scale-95">
+                加速繼續下一題 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- Start Screen Overlay Modal -->
+    <div id="start-overlay" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4">
+        <div class="hud-panel max-w-xl w-full rounded-3xl p-6 sm:p-8 border-2 border-cyan-400 text-center relative shadow-2xl">
+            <div class="text-5xl sm:text-6xl mb-3 animate-bounce">🏎️💨</div>
+            <h1 class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-amber-300 to-red-500 mb-2">
+                香港小六數學：平均數極速賽車
+            </h1>
+            <p class="text-slate-300 text-xs sm:text-sm mb-5 leading-relaxed">
+                考驗你的「平均數」計算速度！在 <strong>3 分鐘（180 秒）</strong>內挑戰最多 <strong>50 道隨機出題題目</strong>，答對觸發氮氣加速超越對手！
+            </p>
+
+            <!-- Mode Selection Options -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 text-left">
+                <div id="mode-gp" class="bg-slate-900/90 hover:bg-slate-800/90 border-2 border-cyan-400 p-3.5 rounded-2xl cursor-pointer transition flex flex-col justify-between active:scale-95">
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-cyan-300 font-extrabold text-sm sm:text-base">🏆 3分鐘/50題大獎賽</span>
+                            <span class="text-[10px] bg-cyan-900 text-cyan-200 px-1.5 py-0.5 rounded">對戰AI</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400">限時 3 分鐘內挑戰 50 道隨機平均數題目，爭奪第一名！</p>
+                    </div>
+                </div>
+
+                <div id="mode-sprint" class="bg-slate-900/90 hover:bg-slate-800/90 border-2 border-slate-700 p-3.5 rounded-2xl cursor-pointer transition flex flex-col justify-between active:scale-95 opacity-80">
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-amber-300 font-extrabold text-sm sm:text-base">⚡ 50題極速計時賽</span>
+                            <span class="text-[10px] bg-amber-900 text-amber-200 px-1.5 py-0.5 rounded">挑戰極限</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400">以最快速度完成 50 道隨機題目，挑戰最少用時紀錄！</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features list -->
+            <div class="bg-slate-900/80 p-3 rounded-xl text-left text-xs text-slate-300 mb-6 border border-slate-800 space-y-1">
+                <div class="text-cyan-300 font-bold mb-1">✨ 小六平均數考點覆蓋（每次隨機出題）：</div>
+                <div class="grid grid-cols-2 gap-1 text-[11px]">
+                    <div>• 基礎直求平均數</div>
+                    <div>• 已知平均數求缺漏項</div>
+                    <div>• 成員加入/離開變更</div>
+                    <div>• 兩組數據合併平均數</div>
+                </div>
+            </div>
+
+            <button id="btn-start-race" class="w-full py-4 bg-gradient-to-r from-amber-500 via-red-500 to-cyan-500 hover:from-amber-400 hover:to-cyan-400 text-slate-950 font-black text-lg sm:text-xl rounded-2xl shadow-lg shadow-cyan-500/30 transform transition hover:scale-[1.02] active:scale-95 font-racing tracking-wider uppercase">
+                🏁 踩油門！開始 3 分鐘競賽
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over / Leaderboard Modal -->
+    <div id="gameover-overlay" class="hidden fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4">
+        <div class="hud-panel max-w-md w-full rounded-3xl p-6 sm:p-8 border-2 border-amber-400 text-center relative shadow-2xl">
+            <div id="finish-trophy" class="text-6xl mb-2 animate-bounce">🏆</div>
+            <h2 id="finish-title" class="text-2xl sm:text-3xl font-black text-amber-300 font-racing mb-1">大獎賽冠軍！</h2>
+            <p id="finish-subtitle" class="text-xs sm:text-sm text-slate-300 mb-4">你在賽道上展現了極致的平均數速算天賦！</p>
+
+            <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-3 mb-6">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <span class="text-xs text-slate-400">最終名次</span>
+                    <span id="end-rank" class="text-2xl font-black text-amber-400 font-racing">1st</span>
+                </div>
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <span class="text-xs text-slate-400">總得分</span>
+                    <span id="end-score" class="text-xl font-bold text-emerald-400 font-mono">1,250</span>
+                </div>
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <span class="text-xs text-slate-400">答對題數 / 正確率</span>
+                    <span id="end-accuracy" class="text-sm font-bold text-cyan-300">8 / 8 (100%)</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-slate-400">車手評級</span>
+                    <span id="end-tier" class="text-xl font-black text-red-400 font-racing">S+ 極速神算</span>
+                </div>
+            </div>
+
+            <button id="btn-restart-race" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black text-lg rounded-2xl shadow-lg transition transform active:scale-95 font-racing">
+                🔄 再次挑戰比賽
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        /**
+         * Web Audio API Synthesizer Engine for Sound FX
+         */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playNitro() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.3);
+
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.35);
+            }
+
+            playScreech() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime + 0.1);
+
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playCheer() {
+                if (this.muted || !this.ctx) return;
+                const notes = [440, 554.37, 659.25, 880]; // A Major chord
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.06);
+
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + i * 0.06);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.06 + 0.3);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + i * 0.06);
+                    osc.stop(this.ctx.currentTime + i * 0.06 + 0.3);
+                });
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        /**
+         * HK Primary 6 Average Math Dynamic Question Generator
+         * Generates 100% solvable numbers aligned with HK EDB curriculum
+         */
+        class HKAverageQuestionGenerator {
+
+            static generate() {
+                // 5 Types of HK P6 Average Math Questions
+                const type = Math.floor(Math.random() * 5) + 1;
+
+                switch (type) {
+                    case 1:
+                        return this.generateDirectAverage();
+                    case 2:
+                        return this.generateMissingItem();
+                    case 3:
+                        return this.generateAddedMember();
+                    case 4:
+                        return this.generateTotalReverse();
+                    case 5:
+                        return this.generateCombinedGroup();
+                    default:
+                        return this.generateDirectAverage();
+                }
+            }
+
+            // Type 1: Direct Average (基礎求平均數)
+            static generateDirectAverage() {
+                const count = [4, 5, 6][Math.floor(Math.random() * 3)];
+                const avg = Math.floor(Math.random() * 30) + 65; // e.g. 65 ~ 95
+                const items = [];
+                let currentSum = 0;
+
+                for (let i = 0; i < count - 1; i++) {
+                    const offset = Math.floor(Math.random() * 21) - 10; // -10 to +10
+                    const val = avg + offset;
+                    items.push(val);
+                    currentSum += val;
+                }
+                const lastVal = (avg * count) - currentSum;
+                items.push(lastVal);
+
+                // Shuffle items
+                items.sort(() => Math.random() - 0.5);
+
+                const nameScenarios = [
+                    { name: '小明在過去', unit: '分', subject: '數學測驗的得分' },
+                    { name: '籃球隊員在最近', unit: '分', subject: '比賽的得分' },
+                    { name: '水果店在過去', unit: '公斤', subject: '每天賣出的蘋果重量' },
+                    { name: '小華在過去', unit: '元', subject: '每天的零用錢支出' }
+                ];
+                const sc = nameScenarios[Math.floor(Math.random() * nameScenarios.length)];
+
+                const qText = `${sc.name} ${count} 天/次${sc.subject}分別是：<br>` +
+                    `<span class="text-amber-300 font-mono text-base sm:text-lg">${items.join(' ' + sc.unit + '、 ')} ${sc.unit}</span>。<br>` +
+                    `求這些數據的<strong class="text-cyan-300">平均數</strong>。`;
+
+                const correctAns = avg;
+                const solutionHtml = `
+                    <p><strong>【計算公式】</strong>：平均數 = 數據總和 ÷ 項數</p>
+                    <p>1. 計算總和：${items.join(' + ')} = <strong>${avg * count}</strong> ${sc.unit}</p>
+                    <p>2. 計算平均數：${avg * count} ÷ ${count} = <strong class="text-amber-300">${avg}</strong> ${sc.unit}</p>
+                `;
+
+                return {
+                    typeTag: '📌 基礎直求平均數',
+                    text: qText,
+                    correctAns: correctAns,
+                    unit: sc.unit,
+                    hint: '平均數 = 數據總和 ÷ 數據項數',
+                    options: this.generateDistractors(correctAns),
+                    solution: solutionHtml
+                };
+            }
+
+            // Type 2: Missing Item given Average (已知平均數求缺漏項)
+            static generateMissingItem() {
+                const count = 5;
+                const avg = Math.floor(Math.random() * 20) + 70; // 70 ~ 90
+                const targetTotal = avg * count;
+
+                const knownItems = [];
+                let knownSum = 0;
+                for (let i = 0; i < count - 1; i++) {
+                    const val = avg + Math.floor(Math.random() * 19) - 9;
+                    knownItems.push(val);
+                    knownSum += val;
+                }
+
+                const missingAns = targetTotal - knownSum;
+
+                const qText = `5 名同學的平均身高是 <span class="text-amber-300 font-bold font-mono">${avg} cm</span>。<br>` +
+                    `其中 4 名同學的身高分別是：<span class="text-cyan-300 font-mono">${knownItems.join(' cm、 ')} cm</span>。<br>` +
+                    `求第 5 名同學的身高是多少 cm？`;
+
+                const solutionHtml = `
+                    <p><strong>【解題步驟】</strong>：已知平均數求未知項</p>
+                    <p>1. 計算 5 人的身高總和：${avg} × 5 = <strong>${targetTotal} cm</strong></p>
+                    <p>2. 計算已知 4 人的身高和：${knownItems.join(' + ')} = <strong>${knownSum} cm</strong></p>
+                    <p>3. 求第 5 人身高：${targetTotal} - ${knownSum} = <strong class="text-amber-300">${missingAns} cm</strong></p>
+                `;
+
+                return {
+                    typeTag: '📌 已知平均數求缺失數據',
+                    text: qText,
+                    correctAns: missingAns,
+                    unit: 'cm',
+                    hint: '缺失項 = (平均數 × 總項數) - 已知數據總和',
+                    options: this.generateDistractors(missingAns),
+                    solution: solutionHtml
+                };
+            }
+
+            // Type 3: Added/Removed Member Effect (成員變更對平均數影響)
+            static generateAddedMember() {
+                const oldCount = 4;
+                const oldAvg = Math.floor(Math.random() * 15) + 40; // 40 ~ 55 kg
+                const oldTotal = oldCount * oldAvg;
+
+                const newMemberVal = oldAvg + (Math.floor(Math.random() * 5) + 2) * 5; // new member is heavier
+                const newCount = oldCount + 1;
+                const newTotal = oldTotal + newMemberVal;
+                const newAvg = newTotal / newCount; // ensured to be integer or clean decimal
+
+                const qText = `接力隊原本有 ${oldCount} 名隊員，平均體重是 <span class="text-amber-300 font-mono">${oldAvg} kg</span>。<br>` +
+                    `加入新隊員小強後，${newCount} 名隊員的平均體重變成 <span class="text-cyan-300 font-mono">${newAvg} kg</span>。<br>` +
+                    `求新隊員小強的體重是多少 kg？`;
+
+                const solutionHtml = `
+                    <p><strong>【解題步驟】</strong>：求新增成員數值</p>
+                    <p>1. 原本 ${oldCount} 人的總體重：${oldAvg} × ${oldCount} = <strong>${oldTotal} kg</strong></p>
+                    <p>2. 加入小強後 ${newCount} 人的總體重：${newAvg} × ${newCount} = <strong>${newTotal} kg</strong></p>
+                    <p>3. 小強的體重：${newTotal} - ${oldTotal} = <strong class="text-amber-300">${newMemberVal} kg</strong></p>
+                `;
+
+                return {
+                    typeTag: '📌 加入成員與平均數變化',
+                    text: qText,
+                    correctAns: newMemberVal,
+                    unit: 'kg',
+                    hint: '新成員數值 = 新總和 - 舊總和',
+                    options: this.generateDistractors(newMemberVal),
+                    solution: solutionHtml
+                };
+            }
+
+            // Type 4: Total Reverse Calculation (已知平均數與天數求總和)
+            static generateTotalReverse() {
+                const days = [5, 6, 7][Math.floor(Math.random() * 3)];
+                const avgSales = Math.floor(Math.random() * 20) * 5 + 100; // e.g. 100, 105, 110 ...
+                const totalSales = days * avgSales;
+
+                const qText = `面包店上星期一至星期 ${days === 5 ? '五' : (days === 6 ? '六' : '日')} (${days} 天) 平均每天賣出蛋撻 <span class="text-amber-300 font-mono font-bold">${avgSales} 個</span>。<br>` +
+                    `該店在這 ${days} 天內<strong class="text-cyan-300">共賣出</strong>蛋撻多少個？`;
+
+                const solutionHtml = `
+                    <p><strong>【計算公式】</strong>：總數 = 平均數 × 項數</p>
+                    <p>1. 總賣出數量：${avgSales} × ${days} = <strong class="text-amber-300">${totalSales} 個</strong></p>
+                `;
+
+                return {
+                    typeTag: '📌 已知平均數倒推求總數',
+                    text: qText,
+                    correctAns: totalSales,
+                    unit: '個',
+                    hint: '總數量 = 平均數 × 天數(項數)',
+                    options: this.generateDistractors(totalSales),
+                    solution: solutionHtml
+                };
+            }
+
+            // Type 5: Combined Groups Average (兩組數據合併平均數)
+            static generateCombinedGroup() {
+                const countA = 4;
+                const avgA = 80;
+                const totalA = countA * avgA; // 320
+
+                const countB = 6;
+                const avgB = 90;
+                const totalB = countB * avgB; // 540
+
+                const combinedTotal = totalA + totalB; // 860
+                const combinedCount = countA + countB; // 10
+                const combinedAvg = combinedTotal / combinedCount; // 86
+
+                const qText = `甲組 ${countA} 人的平均數學得分是 <span class="text-amber-300 font-mono">${avgA} 分</span>；<br>` +
+                    `乙組 ${countB} 人的平均數學得分是 <span class="text-cyan-300 font-mono">${avgB} 分</span>。<br>` +
+                    `兩組共 ${combinedCount} 人的<strong class="text-amber-300">總平均得分</strong>是多少分？`;
+
+                const solutionHtml = `
+                    <p><strong>【注意】</strong>不能直接將 (80+90)÷2！必須先求兩組各自的總分。</p>
+                    <p>1. 甲組總分：${avgA} × ${countA} = <strong>${totalA} 分</strong></p>
+                    <p>2. 乙組總分：${avgB} × ${countB} = <strong>${totalB} 分</strong></p>
+                    <p>3. 兩組總人數：${countA} + ${countB} = <strong>${combinedCount} 人</strong></p>
+                    <p>4. 總平均分：(${totalA} + ${totalB}) ÷ ${combinedCount} = <strong class="text-amber-300">${combinedAvg} 分</strong></p>
+                `;
+
+                return {
+                    typeTag: '📌 兩組數據合併總平均數',
+                    text: qText,
+                    correctAns: combinedAvg,
+                    unit: '分',
+                    hint: '總平均數 = (甲組總和 + 乙組總和) ÷ 總人數',
+                    options: this.generateDistractors(combinedAvg),
+                    solution: solutionHtml
+                };
+            }
+
+            // Helper to generate realistic multiple choice distractors
+            static generateDistractors(correctAns) {
+                const choices = new Set();
+                choices.add(correctAns);
+
+                // Distractor logic: Common student arithmetic mistakes
+                const deltas = [+5, -5, +10, -10, +2, -2, +15, -15];
+                for (let d of deltas) {
+                    const candidate = correctAns + d;
+                    if (candidate > 0 && candidate !== correctAns) {
+                        choices.add(candidate);
+                    }
+                    if (choices.size >= 4) break;
+                }
+
+                // Fill up if needed
+                let loop = 0;
+                while (choices.size < 4 && loop < 30) {
+                    loop++;
+                    const rand = correctAns + (Math.floor(Math.random() * 20) - 10);
+                    if (rand > 0) choices.add(rand);
+                }
+
+                const arr = Array.from(choices).slice(0, 4);
+                // Shuffle choices
+                return arr.sort(() => Math.random() - 0.5);
+            }
+        }
+
+        /**
+         * 2D Animated Race Track Canvas Renderer
+         */
+        class RaceTrackCanvas {
+            constructor() {
+                this.canvas = document.getElementById('race-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.cars = [
+                    { id: 0, name: '你 (Player)', color: '#06b6d4', pos: 0, lane: 0, speed: 0.1, isPlayer: true },
+                    { id: 1, name: '極速小星', color: '#f59e0b', pos: 0, lane: 1, speed: 0.8 },
+                    { id: 2, name: '算術學霸', color: '#ef4444', pos: 0, lane: 2, speed: 0.75 },
+                    { id: 3, name: '衝刺小強', color: '#10b981', pos: 0, lane: 3, speed: 0.7 }
+                ];
+
+                this.trackLength = 1000; // Total race distance meters
+                this.finishLineX = 0;
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            resize() {
+                this.canvas.width = this.canvas.parentElement.clientWidth;
+                this.canvas.height = this.canvas.parentElement.clientHeight;
+            }
+
+            resetCars() {
+                this.cars.forEach(car => car.pos = 0);
+            }
+
+            applyPlayerBoost(amount) {
+                const player = this.cars[0];
+                player.pos += amount;
+                sound.playNitro();
+            }
+
+            updateAI(deltaTime) {
+                // AI cars advance continuously based on time
+                for (let i = 1; i < this.cars.length; i++) {
+                    const car = this.cars[i];
+                    // Random small speed variance
+                    const variance = (Math.random() - 0.4) * 0.2;
+                    car.pos += (car.speed + variance) * (deltaTime * 12);
+                }
+            }
+
+            getLeaderboard() {
+                // Return cars sorted by position descending
+                return [...this.cars].sort((a, b) => b.pos - a.pos);
+            }
+
+            render() {
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                const ctx = this.ctx;
+
+                ctx.clearRect(0, 0, w, h);
+
+                // Background Asphalt Track
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0, 0, w, h);
+
+                // Lanes
+                const laneCount = 4;
+                const laneH = h / laneCount;
+
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([15, 15]);
+
+                for (let i = 1; i < laneCount; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * laneH);
+                    ctx.lineTo(w, i * laneH);
+                    ctx.stroke();
+                }
+                ctx.setLineDash([]);
+
+                // Calculate horizontal camera offset focused on player
+                const playerPos = this.cars[0].pos;
+                const viewScale = w / 350; // Viewport distance span
+
+                // Draw Finish Line banner if in view
+                const finishX = (this.trackLength - playerPos) * viewScale + 120;
+                if (finishX > 0 && finishX < w + 50) {
+                    ctx.fillStyle = '#f8fafc';
+                    ctx.fillRect(finishX, 0, 12, h);
+                    ctx.fillStyle = '#0f172a';
+                    for (let y = 0; y < h; y += 16) {
+                        ctx.fillRect(finishX, y, 6, 8);
+                        ctx.fillRect(finishX + 6, y + 8, 6, 8);
+                    }
+                }
+
+                // Draw Cars
+                this.cars.forEach((car, index) => {
+                    const laneY = car.lane * laneH + laneH / 2;
+                    // Screen X relative to player center
+                    const screenX = (car.pos - playerPos) * viewScale + 100;
+
+                    if (screenX > -50 && screenX < w + 50) {
+                        this.drawCar(ctx, screenX, laneY, car);
+                    }
+                });
+            }
+
+            drawCar(ctx, x, y, car) {
+                ctx.save();
+                ctx.translate(x, y);
+
+                // Car Body
+                ctx.fillStyle = car.color;
+                ctx.beginPath();
+                ctx.roundRect(-22, -10, 44, 20, 5);
+                ctx.fill();
+
+                // Windshield
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(2, -7, 10, 14);
+
+                // Wheels
+                ctx.fillStyle = '#cbd5e1';
+                ctx.fillRect(-16, -12, 8, 3);
+                ctx.fillRect(8, -12, 8, 3);
+                ctx.fillRect(-16, 9, 8, 3);
+                ctx.fillRect(8, 9, 8, 3);
+
+                // Name Tag
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(car.name, 0, -15);
+
+                ctx.restore();
+            }
+        }
+
+        /**
+         * Main Game Manager Logic
+         */
+        class GameEngine {
+            constructor() {
+                this.track = new RaceTrackCanvas();
+                this.score = 0;
+                this.questionIndex = 0;
+                this.correctCount = 0;
+                this.totalAnswered = 0;
+                this.combo = 0;
+                this.maxQuestions = 50;
+
+                this.gameMode = 'gp'; // 'gp' or 'sprint'
+                this.timeLeft = 180.0;
+                this.timerInterval = null;
+                this.isGameActive = false;
+
+                this.currentQuestion = null;
+
+                this.initEventListeners();
+            }
+
+            initEventListeners() {
+                document.getElementById('btn-start-race').addEventListener('click', () => {
+                    sound.init();
+                    document.getElementById('start-overlay').classList.add('hidden');
+                    this.startNewGame();
+                });
+
+                document.getElementById('btn-restart-race').addEventListener('click', () => {
+                    sound.init();
+                    document.getElementById('gameover-overlay').classList.add('hidden');
+                    this.startNewGame();
+                });
+
+                document.getElementById('btn-skip').addEventListener('click', () => {
+                    if (!this.isGameActive) return;
+                    this.score = Math.max(0, this.score - 10);
+                    document.getElementById('score-display').innerText = this.score;
+                    if (this.totalAnswered >= this.maxQuestions) {
+                        this.endGame();
+                    } else {
+                        this.nextQuestion();
+                    }
+                });
+
+                document.getElementById('btn-next-question').addEventListener('click', () => {
+                    document.getElementById('solution-modal').classList.add('hidden');
+                    if (this.totalAnswered >= this.maxQuestions) {
+                        this.endGame();
+                    } else {
+                        this.nextQuestion();
+                    }
+                });
+
+                // Mode Selector Toggle
+                document.getElementById('mode-gp').addEventListener('click', () => {
+                    this.gameMode = 'gp';
+                    document.getElementById('mode-gp').className = 'bg-slate-900/90 border-2 border-cyan-400 p-3.5 rounded-2xl cursor-pointer transition flex flex-col justify-between active:scale-95';
+                    document.getElementById('mode-sprint').className = 'bg-slate-900/90 border-2 border-slate-700 p-3.5 rounded-2xl cursor-pointer transition flex flex-col justify-between active:scale-95 opacity-80';
+                });
+
+                document.getElementById('mode-sprint').addEventListener('click', () => {
+                    this.gameMode = 'sprint';
+                    document.getElementById('mode-sprint').className = 'bg-slate-900/90 border-2 border-amber-400 p-3.5 rounded-2xl cursor-pointer transition flex flex-col justify-between active:scale-95';
+                    document.getElementById('mode-gp').className = 'bg-slate-900/90 border-2 border-slate-700 p-3.5 rounded-2xl cursor-pointer transition flex flex-col justify-between active:scale-95 opacity-80';
+                });
+            }
+
+            startNewGame() {
+                this.score = 0;
+                this.questionIndex = 0;
+                this.correctCount = 0;
+                this.totalAnswered = 0;
+                this.combo = 0;
+                this.maxQuestions = 50;
+                this.isGameActive = true;
+                this.timeLeft = this.gameMode === 'gp' ? 180.0 : 0.0;
+
+                this.track.resetCars();
+                document.getElementById('score-display').innerText = '0';
+                document.getElementById('accuracy-text').innerText = '100%';
+
+                if (this.timerInterval) clearInterval(this.timerInterval);
+
+                const lastTime = Date.now();
+                this.timerInterval = setInterval(() => {
+                    if (!this.isGameActive) return;
+                    const now = Date.now();
+                    const dt = (now - lastTime) / 1000;
+
+                    if (this.gameMode === 'gp') {
+                        this.timeLeft -= 0.1;
+                        if (this.timeLeft <= 0) {
+                            this.timeLeft = 0;
+                            this.endGame();
+                        }
+                    } else {
+                        this.timeLeft += 0.1; // Stopwatch in Sprint
+                        if (this.timeLeft >= 180.0) { // 3 min cap
+                            this.endGame();
+                        }
+                    }
+
+                    document.getElementById('timer-display').innerText = this.timeLeft.toFixed(1) + 's';
+
+                    // Update AI race track positions
+                    this.track.updateAI(0.1);
+                    this.updateRankHUD();
+
+                    this.track.render();
+                }, 100);
+
+                this.nextQuestion();
+            }
+
+            updateRankHUD() {
+                const leaderboard = this.track.getLeaderboard();
+                const playerRank = leaderboard.findIndex(car => car.isPlayer) + 1;
+
+                const suffix = ['st', 'nd', 'rd', 'th'][playerRank - 1] || 'th';
+                document.getElementById('rank-display').innerText = playerRank + suffix;
+            }
+
+            nextQuestion() {
+                this.questionIndex++;
+                document.getElementById('q-num').innerText = `${this.questionIndex} / ${this.maxQuestions}`;
+
+                this.currentQuestion = HKAverageQuestionGenerator.generate();
+                this.renderQuestionCard();
+            }
+
+            renderQuestionCard() {
+                const q = this.currentQuestion;
+                document.getElementById('question-type-tag').innerText = q.typeTag;
+                document.getElementById('question-text').innerHTML = q.text;
+                document.getElementById('formula-hint-text').innerText = q.hint;
+
+                const container = document.getElementById('options-container');
+                container.innerHTML = '';
+
+                q.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'racing-btn hud-panel border-2 border-cyan-500/40 hover:border-cyan-400 hover:bg-slate-800/80 text-white font-extrabold text-lg sm:text-xl py-3.5 px-4 rounded-2xl flex items-center justify-center space-x-1 shadow-lg';
+                    btn.innerHTML = `<span class="font-mono text-amber-300 text-xl sm:text-2xl">${opt}</span> <span class="text-xs text-slate-400 ml-1">${q.unit}</span>`;
+
+                    btn.addEventListener('click', () => this.handleAnswer(opt, btn));
+                    container.appendChild(btn);
+                });
+            }
+
+            handleAnswer(selectedVal, btnElem) {
+                if (!this.isGameActive) return;
+
+                this.totalAnswered++;
+                const isCorrect = selectedVal === this.currentQuestion.correctAns;
+
+                if (isCorrect) {
+                    this.correctCount++;
+                    this.combo++;
+                    sound.playNitro();
+
+                    // Points & Nitro Acceleration Calculation
+                    const comboBonus = Math.min(this.combo, 5) * 20;
+                    this.score += 100 + comboBonus;
+                    document.getElementById('score-display').innerText = this.score;
+
+                    // Boost Player Car on Track
+                    const boostMeters = 80 + (this.combo * 15);
+                    this.track.applyPlayerBoost(boostMeters);
+
+                    // Show Combo Badge
+                    if (this.combo >= 2) {
+                        const badge = document.getElementById('combo-badge');
+                        document.getElementById('combo-count').innerText = 'x' + this.combo;
+                        badge.classList.remove('opacity-0', 'scale-75');
+                        badge.classList.add('opacity-100', 'scale-100');
+                        setTimeout(() => {
+                            badge.classList.add('opacity-0', 'scale-75');
+                        }, 1200);
+                    }
+
+                    // Visual Feedback
+                    btnElem.classList.remove('border-cyan-500/40');
+                    btnElem.classList.add('border-emerald-400', 'bg-emerald-950/80');
+
+                    setTimeout(() => {
+                        if (this.totalAnswered >= this.maxQuestions) {
+                            this.endGame();
+                        } else {
+                            this.nextQuestion();
+                        }
+                    }, 400);
+
+                } else {
+                    this.combo = 0;
+                    sound.playScreech();
+
+                    btnElem.classList.remove('border-cyan-500/40');
+                    btnElem.classList.add('border-rose-500', 'bg-rose-950/80');
+
+                    // Show Solution Step Modal on wrong answer to teach
+                    document.getElementById('solution-content').innerHTML = this.currentQuestion.solution;
+                    document.getElementById('solution-modal').classList.remove('hidden');
+                }
+
+                // Update Accuracy
+                const acc = Math.round((this.correctCount / this.totalAnswered) * 100);
+                document.getElementById('accuracy-text').innerText = acc + '%';
+            }
+
+            endGame() {
+                this.isGameActive = false;
+                if (this.timerInterval) clearInterval(this.timerInterval);
+
+                sound.playCheer();
+
+                const leaderboard = this.track.getLeaderboard();
+                const playerRank = leaderboard.findIndex(car => car.isPlayer) + 1;
+                const rankText = playerRank + (['st', 'nd', 'rd', 'th'][playerRank - 1] || 'th');
+
+                document.getElementById('end-rank').innerText = rankText;
+                document.getElementById('end-score').innerText = this.score.toLocaleString();
+
+                const acc = this.totalAnswered > 0 ? Math.round((this.correctCount / this.totalAnswered) * 100) : 0;
+                document.getElementById('end-accuracy').innerText = `${this.correctCount} / ${this.totalAnswered} (${acc}%)`;
+
+                // Assign Rank Tier Title
+                let tier = 'C 階級車手';
+                if (playerRank === 1 && acc >= 90) tier = 'S+ 極速神算';
+                else if (playerRank <= 2 && acc >= 80) tier = 'A 卓越車手';
+                else if (acc >= 60) tier = 'B 優秀選手';
+
+                document.getElementById('end-tier').innerText = tier;
+
+                document.getElementById('gameover-overlay').classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Tablet Touch Scratchpad Drawing Canvas Overlay
+         */
+        class Scratchpad {
+            constructor() {
+                this.modal = document.getElementById('scratchpad-modal');
+                this.canvas = document.getElementById('scratchpad-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.isDrawing = false;
+
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+
+                this.canvas.addEventListener('pointerdown', (e) => this.startDraw(e));
+                this.canvas.addEventListener('pointermove', (e) => this.draw(e));
+                this.canvas.addEventListener('pointerup', () => this.endDraw());
+                this.canvas.addEventListener('pointercancel', () => this.endDraw());
+
+                document.getElementById('btn-scratchpad').addEventListener('click', () => this.open());
+                document.getElementById('btn-close-pad').addEventListener('click', () => this.close());
+                document.getElementById('btn-clear-pad').addEventListener('click', () => this.clear());
+            }
+
+            resize() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+                this.ctx.strokeStyle = '#38bdf8';
+                this.ctx.lineWidth = 3;
+                this.ctx.lineCap = 'round';
+            }
+
+            open() {
+                this.modal.classList.remove('hidden');
+                this.resize();
+            }
+
+            close() {
+                this.modal.classList.add('hidden');
+            }
+
+            clear() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            getPos(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            }
+
+            startDraw(e) {
+                this.isDrawing = true;
+                const pos = this.getPos(e);
+                this.ctx.beginPath();
+                this.ctx.moveTo(pos.x, pos.y);
+            }
+
+            draw(e) {
+                if (!this.isDrawing) return;
+                const pos = this.getPos(e);
+                this.ctx.lineTo(pos.x, pos.y);
+                this.ctx.stroke();
+            }
+
+            endDraw() {
+                this.isDrawing = false;
+            }
+        }
+
+        // Initialize Game Application on load
+        window.onload = function() {
+            new Scratchpad();
+            new GameEngine();
+
+            document.getElementById('btn-sound').addEventListener('click', () => {
+                sound.init();
+                sound.muted = !sound.muted;
+                document.getElementById('sound-icon').innerText = sound.muted ? '🔇' : '🔊';
+            });
+        };
+    </script>
+</body>
+</html>
